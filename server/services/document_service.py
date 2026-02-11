@@ -1,7 +1,8 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
+from collections import Counter
 from loguru import logger
 
 DOCUMENTS_FILE = "data/documents.json"

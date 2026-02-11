@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { BarChart3, TrendingUp, Users, FileText, Brain, Search, Loader2 } from "lucide-react"
 import { useDocuments } from "../contexts/DocumentContext"
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = "http://localhost:8001"
 
 interface StatCardProps {
     label: string

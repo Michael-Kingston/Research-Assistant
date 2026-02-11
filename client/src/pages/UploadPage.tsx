@@ -4,7 +4,7 @@ import axios from "axios"
 import { cn } from "../lib/utils"
 import { useDocuments } from "../contexts/DocumentContext"
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = "http://localhost:8001"
 
 export default function UploadPage() {
     const { documents, fetchDocuments, deleteDocument, isLoading: isFetching } = useDocuments()

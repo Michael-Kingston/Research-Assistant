@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
 import axios from "axios"
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = "http://localhost:8001"
 
 export interface Document {
     name: string

@@ -13,10 +13,12 @@ class Settings(BaseSettings):
 
     # OpenAI
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_CHAT_MODEL: str = "gpt-3.5-turbo"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
 
     # Server
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8001
     LOG_LEVEL: str = "info"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

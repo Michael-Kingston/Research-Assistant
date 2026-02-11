@@ -1,5 +1,7 @@
 from typing import List
-from langchain.chains import RetrievalQA
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from server.services import embedding_service, vector_store, document_service
 from server.config import settings
@@ -18,7 +20,7 @@ async def _extract_themes(question: str, llm: ChatOpenAI) -> List[str]:
 
 async def query_rag(question: str, top_k: int = 3, active_names: List[str] = []):
     """
-    Performs RAG query using LangChain with metadata filtering.
+    Performs RAG query using explicit LCEL patterns.
     """
     logger.info(f"RAG query: {question} (Active Docs: {active_names})")
     
@@ -30,19 +32,16 @@ async def query_rag(question: str, top_k: int = 3, active_names: List[str] = [])
         # Setup LLM
         if not settings.OPENAI_API_KEY:
             logger.warning("OPENAI_API_KEY missing. Returning mock response.")
-            # Log query with default theme
             document_service.log_query(question, active_names, ["Research"])
             return {
                 "answer": "I found some relevant information, but I need an OpenAI API key to generate a natural language response. Please check your .env file.",
                 "sources": [{"source": name, "content": "Context snippet...", "page": 1} for name in active_names[:2]]
             }
 
-        llm = ChatOpenAI(model="gpt-3.5-turbo", api_key=settings.OPENAI_API_KEY)
+        llm = ChatOpenAI(model=settings.OPENAI_CHAT_MODEL, api_key=settings.OPENAI_API_KEY)
         
         # Extract themes conceptually
         themes = await _extract_themes(question, llm)
-        
-        # Log query for statistics with extracted themes
         document_service.log_query(question, active_names, themes)
         
         # Prepare filter if active_names provided
@@ -50,20 +49,36 @@ async def query_rag(question: str, top_k: int = 3, active_names: List[str] = [])
         if active_names:
             search_kwargs["filter"] = {"source": {"$in": active_names}}
         
-        # Setup QA Chain
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=vectorstore.as_retriever(search_kwargs=search_kwargs),
-            return_source_documents=True
+        # 1. Retrieve
+        retriever = vectorstore.as_retriever(search_kwargs=search_kwargs)
+        context_docs = retriever.invoke(question)
+        context_text = "\n\n".join([doc.page_content for doc in context_docs])
+
+        # 2. Augment & Generate
+        system_prompt = (
+            "You are a research assistant. Use the following pieces of retrieved context to answer the question. "
+            "If you don't know the answer, say that you don't know. Use three sentences maximum and keep the answer concise.\n\n"
+            "{context}"
         )
         
-        # Execute
-        result = await qa_chain.ainvoke({"query": question})
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "{input}"),
+        ])
+
+        # Execute simplified LCEL chain
+        rag_chain = prompt | llm | StrOutputParser()
+        answer = await rag_chain.ainvoke({"context": context_text, "input": question})
+        
+        # Result formatting
+        result = {
+            "answer": answer,
+            "context": context_docs
+        }
         
         # Format sources
         sources = []
-        for doc in result["source_documents"]:
+        for doc in result["context"]:
             sources.append({
                 "source": doc.metadata.get("source", "Unknown"),
                 "content": doc.page_content[:200] + "...",
@@ -71,7 +86,7 @@ async def query_rag(question: str, top_k: int = 3, active_names: List[str] = [])
             })
             
         return {
-            "answer": result["result"],
+            "answer": result["answer"],
             "sources": sources
         }
         

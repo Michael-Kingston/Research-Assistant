@@ -15,11 +15,15 @@ def get_vector_store(embeddings):
             pc = Pinecone(api_key=settings.PINECONE_API_KEY)
             
             # Ensure index exists
-            if settings.PINECONE_INDEX_NAME not in pc.list_indexes().names():
-                logger.info(f"Creating Pinecone index: {settings.PINECONE_INDEX_NAME}")
+            active_indexes = pc.list_indexes().names()
+            if settings.PINECONE_INDEX_NAME not in active_indexes:
+                # Set dimension based on model type
+                dimension = 1536 if settings.EMBEDDING_MODEL_TYPE == "openai" else 384
+                
+                logger.info(f"Creating Pinecone index: {settings.PINECONE_INDEX_NAME} (dimension={dimension})")
                 pc.create_index(
                     name=settings.PINECONE_INDEX_NAME,
-                    dimension=384 if settings.EMBEDDING_MODEL_TYPE != "openai" else 1536,
+                    dimension=dimension,
                     metric="cosine",
                     spec=ServerlessSpec(cloud="aws", region=settings.PINECONE_ENVIRONMENT)
                 )

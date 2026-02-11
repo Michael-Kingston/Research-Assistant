@@ -16,7 +16,7 @@ interface Message {
     sources?: Source[]
 }
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = "http://localhost:8001"
 
 export default function ChatPage() {
     const { documents } = useDocuments()
