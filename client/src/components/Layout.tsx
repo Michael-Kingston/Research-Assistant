@@ -1,5 +1,5 @@
 import { useLocation, Link } from "react-router-dom"
-import { LayoutDashboard, BarChart3, Upload, FileText, ChevronRight, Settings, LogOut, Search, Loader2, Clock, Plus } from "lucide-react"
+import { LayoutDashboard, BarChart3, Upload, FileText, ChevronRight, Settings, LogOut, Search, Loader2, Clock } from "lucide-react"
 import { cn } from "../lib/utils"
 import { useDocuments } from "../contexts/DocumentContext"
 import { useSettings } from "../contexts/SettingsContext"
@@ -51,13 +51,6 @@ export default function Layout({ children }: LayoutProps) {
                     <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
                         <span>Navigation</span>
                     </div>
-                    <Link
-                        to="/"
-                        className="flex items-center gap-2 w-full px-3 py-2 mb-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm shadow-primary/20"
-                    >
-                        <Plus className="h-4 w-4" />
-                        New Research Chat
-                    </Link>
                     <SidebarItem
                         icon={LayoutDashboard}
                         label="Chat Dashboard"
