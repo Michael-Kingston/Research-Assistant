@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react"
-import { Send, FileText, Loader2, User, Search, CornerDownLeft, X, ExternalLink, BookOpen } from "lucide-react"
+import { FileText, Loader2, User, Search, CornerDownLeft, X, ExternalLink, BookOpen, ChevronDown } from "lucide-react"
 import axios from "axios"
+import { useSearchParams } from "react-router-dom"
 import { cn } from "../lib/utils"
 import { useDocuments } from "../contexts/DocumentContext"
+import { useSettings } from "../contexts/SettingsContext"
 
 interface Source {
     source: string
@@ -20,12 +22,41 @@ const API_BASE = "http://localhost:8001"
 
 export default function ChatPage() {
     const { documents } = useDocuments()
+    const { complexity, setComplexity } = useSettings()
+    const [searchParams] = useSearchParams()
+
     const activeDocsCount = documents.filter(d => d.active).length
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState("")
     const [isQuerying, setIsQuerying] = useState(false)
+    const [sessionId, setSessionId] = useState<string | null>(null)
     const [selectedSource, setSelectedSource] = useState<Source | null>(null)
     const scrollRef = useRef<HTMLDivElement>(null)
+
+    // Load session if provided in URL
+    useEffect(() => {
+        const sid = searchParams.get("session")
+        if (sid) {
+            setSessionId(sid)
+            fetchSession(sid)
+        }
+    }, [searchParams])
+
+    const fetchSession = async (id: string) => {
+        try {
+            const response = await axios.get(`${API_BASE}/history`)
+            const sessions = response.data
+            const session = sessions.find((s: any) => s.id === id)
+            if (session) {
+                setMessages(session.messages.map((m: any) => ({
+                    role: m.role,
+                    content: m.content
+                })))
+            }
+        } catch (err) {
+            console.error("Failed to fetch session details:", err)
+        }
+    }
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -44,9 +75,16 @@ export default function ChatPage() {
         try {
             const activeNames = documents.filter(d => d.active).map(d => d.name)
             const response = await axios.post(`${API_BASE}/query`, {
-                question: input,
-                active_names: activeNames
+                question: userMessage.content,
+                active_names: activeNames,
+                complexity: complexity,
+                session_id: sessionId
             })
+
+            if (response.data.session_id && !sessionId) {
+                setSessionId(response.data.session_id)
+            }
+
             const assistantMessage: Message = {
                 role: "assistant",
                 content: response.data.answer,
@@ -170,33 +208,57 @@ export default function ChatPage() {
 
                 {/* Input Area */}
                 <div className="p-6 border-t bg-card">
-                    <div className="max-w-4xl mx-auto relative group">
-                        <textarea
-                            rows={1}
-                            placeholder="Interrogate data context..."
-                            className="w-full pl-4 pr-14 py-3 bg-slate-50 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none transition-all shadow-inner text-sm"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault()
-                                    handleQuery()
-                                }
-                            }}
-                        />
-                        <button
-                            onClick={handleQuery}
-                            disabled={isQuerying || !input.trim()}
-                            className="absolute right-2 top-2 h-8 w-8 bg-primary text-primary-foreground rounded-md flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
-                        >
-                            {isQuerying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerDownLeft className="h-4 w-4" />}
-                        </button>
-                        <div className="mt-2 flex justify-between px-1">
+                    <div className="max-w-4xl mx-auto space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1 relative">
+                                <textarea
+                                    rows={1}
+                                    placeholder="Interrogate data context..."
+                                    className="w-full pl-4 pr-14 py-3 bg-slate-50 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none transition-all shadow-inner text-sm"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault()
+                                            handleQuery()
+                                        }
+                                    }}
+                                />
+                                <button
+                                    onClick={handleQuery}
+                                    disabled={isQuerying || !input.trim()}
+                                    className="absolute right-2 top-2 h-8 w-8 bg-primary text-primary-foreground rounded-md flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-all shadow-sm"
+                                >
+                                    {isQuerying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerDownLeft className="h-4 w-4" />}
+                                </button>
+                            </div>
+
+                            <div className="relative group shrink-0">
+                                <select
+                                    value={complexity}
+                                    onChange={(e) => setComplexity(e.target.value)}
+                                    className="appearance-none bg-secondary/50 border border-border rounded-lg px-4 py-3 pr-10 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-all hover:bg-secondary"
+                                >
+                                    {["Middle School", "High-School", "Undergraduate", "Post Graduate", "Researcher"].map(level => (
+                                        <option key={level} value={level}>{level}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between px-1">
                             <p className="text-[10px] text-muted-foreground">
                                 <kbd className="px-1 py-0.5 rounded border border-border bg-secondary">Enter</kbd> to send • <kbd className="px-1 py-0.5 rounded border border-border bg-secondary">Shift+Enter</kbd> for newline
                             </p>
-                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                Context: <span className="text-primary font-medium">{activeDocsCount} {activeDocsCount === 1 ? 'Document' : 'Documents'} Active</span>
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-2">
+                                <span className="flex items-center gap-1">
+                                    Context: <span className="text-primary font-medium">{activeDocsCount} {activeDocsCount === 1 ? 'Document' : 'Documents'}</span>
+                                </span>
+                                <span className="w-1 h-1 bg-muted-foreground/30 rounded-full" />
+                                <span className="flex items-center gap-1">
+                                    Complexity: <span className="text-primary font-medium">{complexity}</span>
+                                </span>
                             </p>
                         </div>
                     </div>

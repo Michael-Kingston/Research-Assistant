@@ -18,7 +18,7 @@ async def _extract_themes(question: str, llm: ChatOpenAI) -> List[str]:
         logger.warning(f"Theme extraction failed: {e}")
         return ["Research"]
 
-async def query_rag(question: str, top_k: int = 3, active_names: List[str] = [], complexity: str = "Undergraduate"):
+async def query_rag(question: str, top_k: int = 3, active_names: List[str] = []):
     """
     Performs RAG query using explicit LCEL patterns.
     """
@@ -54,23 +54,10 @@ async def query_rag(question: str, top_k: int = 3, active_names: List[str] = [],
         context_docs = retriever.invoke(question)
         context_text = "\n\n".join([doc.page_content for doc in context_docs])
 
-        # Map academic complexity tiers to prompt instructions
-        complexity_prompts = {
-            "Middle School": "Explain using simple analogies, avoid technical jargon, use short sentences, and be very encouraging. Imagine you are explaining to a 12-year-old.",
-            "High-School": "Clear explanations, define any technical terms used, focus on core concepts, and avoid overly dense academic language.",
-            "Undergraduate": "Maintain an academic professional tone. Assume general scientific knowledge, include relevant methodological notes, and provide structured details.",
-            "Post Graduate": "Provide advanced technical detail. Discuss nuances, critical limitations, and assume deep domain expertise. Use precise academic terminology.",
-            "Researcher": "Provide a brief, dense, and highly technical summary. Focus on data significance, statistical validity, and academic novelty. Skip basic conceptual explanations."
-        }
-        
-        complexity_instruction = complexity_prompts.get(complexity, complexity_prompts["Undergraduate"])
-
         # 2. Augment & Generate
         system_prompt = (
-            "You are a professional research assistant. Use the following pieces of retrieved context to answer the question.\n\n"
-            f"STYLE INSTRUCTION: {complexity_instruction}\n\n"
-            "If you don't know the answer based on the context, say that you don't know. Keep the answer concise but thorough for the requested level.\n\n"
-            "CONTEXT:\n"
+            "You are a research assistant. Use the following pieces of retrieved context to answer the question. "
+            "If you don't know the answer, say that you don't know. Use four sentences maximum and keep the answer concise.\n\n"
             "{context}"
         )
         

@@ -91,17 +91,48 @@ async def upload_pdf(
 @limiter.limit("10/minute")
 async def query_bot(request: Request, query_request: QueryRequest):
     try:
-        logger.info(f"Querying bot with question: {query_request.question}")
+        from server.services import history_service
         
-        result = await rag_service.query_rag(query_request.question, query_request.top_k, query_request.active_names)
+        logger.info(f"Querying bot with question: {query_request.question} (Complexity: {query_request.complexity})")
+        
+        # Ensure session exists
+        session_id = query_request.session_id
+        if not session_id:
+            session = history_service.create_session(title=query_request.question[:50] + "...")
+            session_id = session.id
+            
+        # Log user message
+        history_service.add_message(session_id, "user", query_request.question)
+        
+        result = await rag_service.query_rag(
+            query_request.question, 
+            query_request.top_k, 
+            query_request.active_names,
+            query_request.complexity
+        )
+        
+        # Log assistant response
+        history_service.add_message(session_id, "assistant", result["answer"])
         
         return QueryResponse(
             answer=result["answer"],
-            sources=[Source(**s) for s in result["sources"]]
+            sources=[Source(**s) for s in result["sources"]],
+            session_id=session_id
         )
     except Exception as e:
         logger.error(f"Error querying bot: {e}")
         raise HTTPException(status_code=500, detail="Research query failed. Please try again later.")
+
+@app.get("/history")
+async def get_history():
+    from server.services import history_service
+    return history_service.get_all_sessions()
+
+@app.delete("/history/{session_id}")
+async def delete_history_session(session_id: str):
+    from server.services import history_service
+    history_service.delete_session(session_id)
+    return {"status": "success"}
 
 @app.get("/stats")
 @limiter.limit("10/minute")

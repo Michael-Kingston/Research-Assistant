@@ -1,7 +1,9 @@
 import { useLocation, Link } from "react-router-dom"
-import { LayoutDashboard, BarChart3, Upload, FileText, ChevronRight, Settings, LogOut, Search, Loader2 } from "lucide-react"
+import { LayoutDashboard, BarChart3, Upload, FileText, ChevronRight, Settings, LogOut, Search, Loader2, Clock } from "lucide-react"
 import { cn } from "../lib/utils"
 import { useDocuments } from "../contexts/DocumentContext"
+import { useSettings } from "../contexts/SettingsContext"
+import SettingsModal from "./SettingsModal"
 
 interface SidebarItemProps {
     icon: React.ElementType
@@ -32,6 +34,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
     const location = useLocation()
     const { documents, toggleDocumentActive, isLoading } = useDocuments()
+    const { complexity, isSettingsOpen, setIsSettingsOpen, setComplexity } = useSettings()
 
     return (
         <div className="flex h-screen bg-background overflow-hidden">
@@ -65,6 +68,12 @@ export default function Layout({ children }: LayoutProps) {
                         label="Statistics"
                         href="/statistics"
                         active={location.pathname === "/statistics"}
+                    />
+                    <SidebarItem
+                        icon={Clock}
+                        label="Chat History"
+                        href="/history"
+                        active={location.pathname === "/history"}
                     />
 
                     <div className="pt-8 mb-2">
@@ -126,7 +135,10 @@ export default function Layout({ children }: LayoutProps) {
                         </h1>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="p-2 text-muted-foreground hover:text-primary transition-colors">
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="p-2 text-muted-foreground hover:text-primary transition-colors"
+                        >
                             <Settings className="h-4 w-4" />
                         </button>
                         <button className="p-2 text-muted-foreground hover:text-primary transition-colors">
@@ -139,6 +151,13 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="flex-1 overflow-auto">
                     {children}
                 </div>
+
+                <SettingsModal
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    complexity={complexity}
+                    setComplexity={setComplexity}
+                />
             </main>
         </div>
     )
