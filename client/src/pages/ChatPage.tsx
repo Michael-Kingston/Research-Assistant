@@ -33,14 +33,42 @@ export default function ChatPage() {
     const [selectedSource, setSelectedSource] = useState<Source | null>(null)
     const scrollRef = useRef<HTMLDivElement>(null)
 
-    // Load session if provided in URL
+    // Load session if provided in URL or load most recent by default
     useEffect(() => {
         const sid = searchParams.get("session")
         if (sid) {
-            setSessionId(sid)
-            fetchSession(sid)
+            if (sid !== sessionId) {
+                setSessionId(sid)
+                fetchSession(sid)
+            }
+        } else {
+            // New Chat or Default to Last
+            if (sessionId) {
+                // Clear for new chat if specifically requested (sid is null)
+                setMessages([])
+                setSessionId(null)
+            } else {
+                fetchMostRecentSession()
+            }
         }
     }, [searchParams])
+
+    const fetchMostRecentSession = async () => {
+        try {
+            const response = await axios.get(`${API_BASE}/history`)
+            const sessions = response.data
+            if (sessions && sessions.length > 0) {
+                const latest = sessions[0]
+                setSessionId(latest.id)
+                setMessages(latest.messages.map((m: any) => ({
+                    role: m.role,
+                    content: m.content
+                })))
+            }
+        } catch (err) {
+            console.error("Failed to fetch recent history:", err)
+        }
+    }
 
     const fetchSession = async (id: string) => {
         try {

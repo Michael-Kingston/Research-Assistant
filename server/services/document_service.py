@@ -113,6 +113,19 @@ def get_stats() -> Dict:
         doc_counts.update(q.get("docs", []))
         theme_counts.update(q.get("themes", []))
     
+    # Storage Calculation (Assuming 1GB limit)
+    LIMIT_BYTES = 1024 * 1024 * 1024
+    total_bytes = 0
+    for doc in docs:
+        try:
+            # Parse size string back to MB if bytes not available
+            size_str = doc.get("size", "0 MB")
+            val = float(size_str.split()[0])
+            total_bytes += int(val * 1024 * 1024)
+        except: continue
+        
+    storage_percent = min(100, round((total_bytes / LIMIT_BYTES) * 100, 1))
+
     return {
         "total_docs": len(docs),
         "total_queries": len(queries),
@@ -120,5 +133,6 @@ def get_stats() -> Dict:
         "activity_series": [{"name": datetime.fromisoformat(d).strftime("%a"), "queries": c} for d, c in activity_map.items()],
         "doc_distribution": [{"topic": n[:15] + "..." if len(n) > 15 else n, "count": c} for n, c in doc_counts.most_common(5)],
         "theme_distribution": [{"theme": t, "count": c} for t, c in theme_counts.most_common(10)],
-        "time_saved_hours": round(len(queries) * 0.45, 1)
+        "time_saved_hours": round(len(queries) * 0.45, 1),
+        "storage_percentage": storage_percent
     }

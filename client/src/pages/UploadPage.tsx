@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Trash2, Database, Search } from "lucide-react"
 import axios from "axios"
 import { cn } from "../lib/utils"
@@ -9,6 +9,20 @@ const API_BASE = "http://localhost:8001"
 export default function UploadPage() {
     const { documents, fetchDocuments, deleteDocument, isLoading: isFetching } = useDocuments()
     const [isUploading, setIsUploading] = useState(false)
+    const [storagePercentage, setStoragePercentage] = useState(0)
+
+    const fetchStats = async () => {
+        try {
+            const response = await axios.get(`${API_BASE}/stats`)
+            setStoragePercentage(response.data.storage_percentage || 0)
+        } catch (err) {
+            console.error("Failed to fetch storage stats")
+        }
+    }
+
+    useEffect(() => {
+        fetchStats()
+    }, [documents])
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -170,7 +184,7 @@ export default function UploadPage() {
                             </div>
                         )}
                         <div className="px-6 py-3 bg-slate-50/30 text-[10px] font-medium text-muted-foreground flex justify-between uppercase tracking-wider">
-                            <span>Current Capacity: 15%</span>
+                            <span>Current Capacity: {storagePercentage}%</span>
                             <span className="text-primary">Upgrade Storage Plan</span>
                         </div>
                     </div>
