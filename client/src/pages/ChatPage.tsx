@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react"
-import { FileText, Loader2, User, Search, CornerDownLeft, X, ExternalLink, BookOpen, ChevronDown } from "lucide-react"
+import { FileText, Loader2, User, Search, CornerDownLeft, X, ExternalLink, BookOpen, ChevronDown, Plus } from "lucide-react"
 import axios from "axios"
-import { useSearchParams } from "react-router-dom"
+import { useSearchParams, useNavigate } from "react-router-dom"
 import { cn } from "../lib/utils"
 import { useDocuments } from "../contexts/DocumentContext"
 import { useSettings } from "../contexts/SettingsContext"
@@ -24,6 +24,7 @@ export default function ChatPage() {
     const { documents } = useDocuments()
     const { complexity, setComplexity } = useSettings()
     const [searchParams] = useSearchParams()
+    const navigate = useNavigate()
 
     const activeDocsCount = documents.filter(d => d.active).length
     const [messages, setMessages] = useState<Message[]>([])
@@ -84,6 +85,12 @@ export default function ChatPage() {
         } catch (err) {
             console.error("Failed to fetch session details:", err)
         }
+    }
+
+    const handleNewChat = () => {
+        setMessages([])
+        setSessionId(null)
+        navigate("/", { replace: true })
     }
 
     useEffect(() => {
@@ -238,6 +245,13 @@ export default function ChatPage() {
                 <div className="p-6 border-t bg-card">
                     <div className="max-w-4xl mx-auto space-y-4">
                         <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleNewChat}
+                                className="h-11 px-4 bg-secondary border border-border rounded-lg flex items-center gap-2 text-xs font-medium hover:bg-slate-200 transition-all shrink-0"
+                            >
+                                <Plus className="h-4 w-4" />
+                                <span>New Chat</span>
+                            </button>
                             <div className="flex-1 relative">
                                 <textarea
                                     rows={1}
